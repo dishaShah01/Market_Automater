@@ -1,26 +1,46 @@
 import re
 import string
 import pandas as pd
+import nltk
+import argparse
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+nltk.download('omw-1.4')
+nltk.download('wordnet')
 
 def clean_text(text):
-#will replace the html characters with " "
     text=re.sub('<.*?>', ' ', text)
-    #To remove the punctuations
     text = text.translate(str.maketrans(' ',' ',string.punctuation))
-    #will consider only alphabets and numerics
     text = re.sub('[^a-zA-Z]',' ',text)
-    #will replace newline with space
     text = re.sub("\n"," ",text)
-    #will convert to lower case
     text = text.lower()
-    # will split and join the words
     text=' '.join(text.split())
     return text
-#Running the Funtion
 
-def main(path):
+
+def process(path="Marketer\data\dataset\twitter_results.csv"):
     df = pd.read_csv(path)
-    df.iloc[:,2].apply(clean_text)
+    df.iloc[:,2] = df.iloc[:,2].apply(clean_text)
+
+    lemmatizer = WordNetLemmatizer()
+    tokenizer = RegexpTokenizer(r'\w+')
+    df.iloc[:,2] = df.iloc[:,2].apply(lambda x: tokenizer.tokenize(x))
+
+    stop_words = set(stopwords.words('english'))
+    df.iloc[:,2] = df.iloc[:,2].apply(lambda x: [word if word not in stop_words else '' for word in x])
+
+    df.iloc[:,2] = df.iloc[:,2].apply(lambda x: [lemmatizer.lemmatize(word) for word in x])
+
+    df.iloc[:,2] = df.iloc[:,2].apply(lambda x: ' '.join([str(elem) for elem in x]))
+    print(df)
+    df.to_csv("Marketer/data/dataset/" + "preprocessed_twitter_data.csv",index=False)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', type=str,default=None, help='path to twitter data')
+    args = parser.parse_args()
+    process(args.path)
 
 if __name__ == '__main__':
-    pass
+    main()
